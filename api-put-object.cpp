@@ -18,7 +18,7 @@ void *Aligned(size_t bufsize, int c) {
     return NULL;
   }
   assert(bufptr);
-  memset(bufptr, 'B', bufsize);
+  memset(bufptr, c, bufsize);
   return bufptr;
 }
 
@@ -26,7 +26,7 @@ void *AlignedGPU(size_t bufsize, int c) {
   char *bufptr;
   
   cudaMalloc(&bufptr, bufsize);
-  cudaMemset(bufptr,'B', bufsize);
+  cudaMemset(bufptr, c, bufsize);
   cudaStreamSynchronize(0);
   return bufptr;
 }
@@ -39,7 +39,7 @@ void GPUToHost(void *dst, void *src, size_t size) {
   cudaMemcpy((char *)dst, (char *)src, size, cudaMemcpyDeviceToHost);
 }
 
-int PutObjectRDMA(cClient clnt, const char *bucket, const char *object, void *buf, size_t size) {
+char *PutObjectRDMA(cClient clnt, const char *bucket, const char *object, void *buf, size_t size) {
   minio::s3::Client* ret = (minio::s3::Client *) clnt;
 
   minio::s3::PutObjectRDMAArgs *args = new minio::s3::PutObjectRDMAArgs;
@@ -50,12 +50,16 @@ int PutObjectRDMA(cClient clnt, const char *bucket, const char *object, void *bu
 
   minio::s3::PutObjectResponse resp = ret->PutObject(*args);
   if (resp) {
-    return 1;
+    return NULL;
   }
-  return -1;
+
+  auto errResp = resp.Error().String();
+  char * cstr = new char [errResp.length()+1];
+  std::strcpy (cstr, errResp.c_str());
+  return cstr;
 }
 
-int GetObjectRDMA(cClient clnt, const char *bucket, const char *object, void *buf, size_t size) {
+char *GetObjectRDMA(cClient clnt, const char *bucket, const char *object, void *buf, size_t size) {
   minio::s3::Client* ret = (minio::s3::Client *) clnt;
 
   minio::s3::GetObjectRDMAArgs *args = new minio::s3::GetObjectRDMAArgs;
@@ -66,9 +70,13 @@ int GetObjectRDMA(cClient clnt, const char *bucket, const char *object, void *bu
 
   minio::s3::GetObjectResponse resp = ret->GetObject(*args);
   if (resp) {
-    return 1;
+    return NULL;
   }
-  return -1;
+
+  auto errResp = resp.Error().String();
+  char * cstr = new char [errResp.length()+1];
+  std::strcpy (cstr, errResp.c_str());
+  return cstr;
 }
 
 cClient newMinioCPP(char *endpoint, bool secure, char *region, Credentials creds) {

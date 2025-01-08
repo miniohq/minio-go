@@ -116,8 +116,8 @@ func (clnt *MetaClient) GetObjectRDMA(ctx context.Context, bucketName, objectNam
 	defer C.free(unsafe.Pointer(objectC))
 
 	ret := C.GetObjectRDMA(clnt.CClient, bucketC, objectC, buf, C.size_t(size))
-	if ret < 0 {
-		return errors.New("unable to download the object")
+	if ret != nil {
+		return errors.New(C.GoString(ret))
 	}
 	return nil
 }
@@ -130,8 +130,8 @@ func (clnt *MetaClient) PutObjectRDMA(ctx context.Context, bucketName, objectNam
 	defer C.free(unsafe.Pointer(objectC))
 
 	ret := C.PutObjectRDMA(clnt.CClient, bucketC, objectC, buf, C.size_t(size))
-	if ret < 0 {
-		return UploadInfo{}, errors.New("unable to upload the object")
+	if ret != nil {
+		return UploadInfo{}, errors.New(C.GoString(ret))
 	}
 
 	return UploadInfo{Bucket: bucketName, Key: objectName, Size: int64(size)}, nil
